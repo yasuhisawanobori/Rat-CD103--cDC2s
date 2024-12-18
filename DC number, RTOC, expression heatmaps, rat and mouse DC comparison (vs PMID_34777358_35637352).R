@@ -722,4 +722,673 @@ write.table(c(Rat_Thy_CD103neg_vs_cDC2_GSEA@geneSets$`GO:0006260`,Rat_Thy_CD103n
 #save GSEA results
 write.xlsx(list("Rat_Thy_CD103neg_vs_cDC2"=Rat_Thy_CD103neg_vs_cDC2_GSEA, "Rat_Spl_CD103neg_vs_cDC2"=Rat_Spl_CD103neg_vs_cDC2_GSEA,
                 "Rat_ThyCD103neg_vs_SplCD103neg"=Rat_ThyCD103neg_vs_SplCD103neg_GSEA), 
-           "PMID_34777358_35637352 mouse cDC1 cDC2 correlation/CD103neg_vs_cDC2_GSEA.xlsx")
+           "PMID_34777358_35637352 mouse cDC1 cDC2 correlation/CD103neg_vs_cDC2_GSEA.xlsx") #supplementary figure 1-4
+
+View(Rat_Spl_CD103negDom@result)
+
+#spleen: Rat and mouse enriched term comparison-----
+# Add adjRank to Rat GSEA results
+top_500_rat <- Rat_Spl_CD103negDom@result %>%
+  arrange(p.adjust) %>%
+  mutate(adjRank = row_number()) %>%
+  slice(1:500)
+
+# Add adjRank to Mouse GSEA results
+top_500_mouse <- MoSplDC2bDom@result %>%
+  arrange(p.adjust) %>%
+  mutate(adjRank = row_number()) %>%
+  slice(1:500)
+
+common_terms <- intersect(top_500_rat$Description, top_500_mouse$Description)
+
+common_ranks_rat <- top_500_rat %>%
+  filter(Description %in% common_terms) %>%
+  dplyr::select(Description, adjRank)
+
+common_ranks_mouse <- top_500_mouse %>%
+  filter(Description %in% common_terms) %>%
+  dplyr::select(Description, adjRank)
+
+# Wilcoxon test for adjRank
+wilcox.test(common_ranks_rat$adjRank, mu = median(top_500_rat$adjRank))
+
+wilcox.test(common_ranks_mouse$adjRank, mu = median(top_500_mouse$adjRank))
+
+# Histogram
+ggplot(data = common_ranks_rat, aes(x = adjRank)) +
+  geom_histogram(bins = 20, fill = "lightblue", color = "black") +
+  labs(title = "Distribution of Common Terms by adjRank",
+       x = "Adjusted Rank (adjRank)",
+       y = "Frequency") +
+  theme_minimal()
+
+ggplot(data = common_ranks_mouse, aes(x = adjRank)) +
+  geom_histogram(bins = 20, fill = "lightblue", color = "black") +
+  labs(title = "Distribution of Common Terms by adjRank",
+       x = "Adjusted Rank (adjRank)",
+       y = "Frequency") +
+  theme_minimal()
+
+#Treeplot
+RatCD103nMoDC2bCommon <- Rat_Spl_CD103neg_vs_cDC2_GSEA
+RatCD103nMoDC2bCommon@result <- top_500_rat %>% filter(Description %in% common_terms)
+
+treeplot(pairwise_termsim(RatCD103nMoDC2bCommon),  showCategory = 200, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.3), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 30, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+set.seed(123)
+emapplot(pairwise_termsim(RatCD103nMoDC2bCommon), layout.params = list(layout = "kk"), color="p.adjust", showCategory=200,
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+
+MoDC2bRatCD103nCommon <- MoSplDC2bDC2a_GSEA
+MoDC2bRatCD103nCommon@result <- top_500_mouse %>% filter(Description %in% common_terms)
+
+treeplot(pairwise_termsim(MoDC2bRatCD103nCommon),  showCategory = 200, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.3), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 30, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+set.seed(123)
+emapplot(pairwise_termsim(MoDC2bRatCD103nCommon), layout.params = list(layout = "kk"), color="p.adjust", showCategory=200,
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+
+# CDF Plot
+uniform_data <- data.frame(
+  x = seq(min(common_ranks_rat$adjRank), max(common_ranks_rat$adjRank), length.out = 100),
+  y = seq(0, 1, length.out = 100)
+)
+
+ggplot(data = common_ranks_rat, aes(x = adjRank)) +
+  # Add ECDF curve
+  stat_ecdf(geom = "step", color = "blue", size = 1) +
+  # Add uniform curve
+  geom_line(data = uniform_data, aes(x = x, y = y), color = "red", linetype = "dashed", size = 1) +
+  labs(
+    title = "Empirical CDF and Uniform Distribution",
+    x = "Adjusted Rank (adjRank)",
+    y = "Cumulative Probability"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14), # Center the title
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12)
+  ) +
+  scale_y_continuous(labels = scales::percent) # Optional: Show y-axis as percentages
+
+#spleen: Rat, mouse, human enriched term comparison-----
+# Add adjRank to Rat GSEA results
+spl_top_500_rat <- Rat_Spl_CD103negDom@result %>%
+  arrange(p.adjust) %>%
+  mutate(adjRank = row_number()) %>%
+  slice(1:500)
+
+# Add adjRank to Mouse GSEA results
+spl_top_500_mouse <- MoSplDC2bDom@result %>%
+  arrange(p.adjust) %>%
+  mutate(adjRank = row_number()) %>%
+  slice(1:500)
+
+# Add adjRank to human GSEA results
+spl_top_500_human <- HuSplCD103nDom@result %>%
+  arrange(p.adjust) %>%
+  mutate(adjRank = row_number()) %>%
+  slice(1:500)
+
+venn.diagram(x=list(spl_top_500_rat$Description, spl_top_500_mouse$Description, spl_top_500_human$Description),
+             category.names = c("Rat", "Mouse", "Human"), filename = "pic/spleeCD103nTerms.png",
+             height = 1000, width = 1000,lwd=c(1,1,1), fill=c(2,3,4),	cex= 0.9, fontfamily="sans",
+             cat.dist=c(0.1, 0.1, 0.05), cat.fontfamily="sans", margin=0.08)
+
+spl_common_terms <- intersect(intersect(spl_top_500_rat$Description, spl_top_500_mouse$Description), spl_top_500_human$Description)
+spl_RatMoCommonNotHu_terms <- setdiff(intersect(spl_top_500_rat$Description, spl_top_500_mouse$Description), spl_top_500_human$Description)
+spl_RatHuCommonNotMo_terms <- setdiff(intersect(spl_top_500_rat$Description, spl_top_500_human$Description), spl_top_500_mouse$Description)
+spl_MoHuCommonNotRat_terms <- setdiff(intersect(spl_top_500_mouse$Description, spl_top_500_human$Description), spl_top_500_rat$Description)
+
+spl_RatOnly_terms <-  setdiff(setdiff(spl_top_500_rat$Description, spl_top_500_human$Description), spl_top_500_mouse$Description)
+spl_MoOnly_terms <-  setdiff(setdiff(spl_top_500_mouse$Description, spl_top_500_human$Description), spl_top_500_rat$Description)
+spl_HuOnly_terms <-  setdiff(setdiff(spl_top_500_human$Description, spl_top_500_rat$Description), spl_top_500_mouse$Description)
+
+
+spl_common_ranks_rat <- spl_top_500_rat %>%
+  filter(Description %in% spl_common_terms) %>%
+  dplyr::select(Description, adjRank)
+
+spl_common_ranks_mouse <- spl_top_500_mouse %>%
+  filter(Description %in% spl_common_terms) %>%
+  dplyr::select(Description, adjRank)
+
+spl_common_ranks_human <- spl_top_500_human %>%
+  filter(Description %in% spl_common_terms) %>%
+  dplyr::select(Description, adjRank)
+
+spl_RatMoCommonNotHu_ranks_rat <- spl_top_500_rat %>%
+  filter(Description %in% spl_RatMoCommonNotHu_terms) %>%
+  dplyr::select(Description, adjRank)
+
+spl_RatMoCommonNotHu_ranks_mouse <- spl_top_500_mouse %>%
+  filter(Description %in% spl_RatMoCommonNotHu_terms) %>%
+  dplyr::select(Description, adjRank)
+
+spl_RatHuCommonNotMo_ranks_rat <- spl_top_500_rat %>%
+  filter(Description %in% spl_RatHuCommonNotMo_terms) %>%
+  dplyr::select(Description, adjRank)
+
+spl_RatHuCommonNotMo_ranks_human <- spl_top_500_human %>%
+  filter(Description %in% spl_RatHuCommonNotMo_terms) %>%
+  dplyr::select(Description, adjRank)
+
+spl_MoHuCommonNotRat_ranks_mouse <- spl_top_500_mouse %>%
+  filter(Description %in% spl_MoHuCommonNotRat_terms) %>%
+  dplyr::select(Description, adjRank)
+
+spl_MoHuCommonNotRat_ranks_human <- spl_top_500_human %>%
+  filter(Description %in% spl_MoHuCommonNotRat_terms) %>%
+  dplyr::select(Description, adjRank)
+
+spl_RatOnly_ranks_rat <- spl_top_500_rat %>%
+  filter(Description %in% spl_RatOnly_terms) %>%
+  dplyr::select(Description, adjRank)
+
+spl_MoOnly_ranks_mouse <- spl_top_500_mouse %>%
+  filter(Description %in% spl_MoOnly_terms) %>%
+  dplyr::select(Description, adjRank)
+
+spl_HuOnly_ranks_human <- spl_top_500_human %>%
+  filter(Description %in% spl_HuOnly_terms) %>%
+  dplyr::select(Description, adjRank)
+
+# Wilcoxon test for adjRank
+wilcox.test(spl_common_ranks_rat$adjRank, mu = median(spl_top_500_rat$adjRank)) #Figure 7A
+
+wilcox.test(spl_common_ranks_mouse$adjRank, mu = median(spl_top_500_mouse$adjRank)) #Figure 7A
+
+wilcox.test(spl_common_ranks_human$adjRank, mu = median(spl_top_500_human$adjRank)) #Figure 7A
+
+wilcox.test(spl_RatMoCommonNotHu_ranks_rat$adjRank, mu = median(spl_top_500_rat$adjRank))
+
+wilcox.test(spl_RatMoCommonNotHu_ranks_mouse$adjRank, mu = median(spl_top_500_mouse$adjRank))
+
+wilcox.test(spl_RatHuCommonNotMo_ranks_rat$adjRank, mu = median(top_500_rat$adjRank))
+
+wilcox.test(spl_RatHuCommonNotMo_ranks_human$adjRank, mu = median(spl_top_500_human$adjRank))
+
+wilcox.test(spl_MoHuCommonNotRat_ranks_mouse$adjRank, mu = median(spl_top_500_mouse$adjRank))
+
+wilcox.test(spl_MoHuCommonNotRat_ranks_human$adjRank, mu = median(spl_top_500_human$adjRank))
+
+wilcox.test(spl_RatOnly_ranks_rat$adjRank, mu = median(spl_top_500_rat$adjRank))
+
+wilcox.test(spl_MoOnly_ranks_mouse$adjRank, mu = median(spl_top_500_mouse$adjRank))
+
+wilcox.test(spl_HuOnly_ranks_human$adjRank, mu = median(spl_top_500_human$adjRank))
+
+# Histogram
+ggplot() + # Figure 7A,  3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_rat, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = spl_common_ranks_rat, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 2, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+
+ggplot() + # Figure 7A,  3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_mouse, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = spl_common_ranks_mouse, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 3, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+ggplot() + # Figure 7A,  3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_human, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = spl_common_ranks_human, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 4, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+ggplot() + # 3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_rat, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = spl_RatMoCommonNotHu_ranks_rat, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 2, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+ggplot() + # 3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_mouse, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = spl_RatMoCommonNotHu_ranks_mouse, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 3, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+ggplot() + # 3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_rat, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = spl_RatHuCommonNotMo_ranks_rat, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 2, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+ggplot() + # 3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_human, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = spl_RatHuCommonNotMo_ranks_human, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 4, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+ggplot() + # 3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_mouse, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = spl_MoHuCommonNotRat_ranks_mouse, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 3, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+ggplot() + # 3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_human, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = spl_MoHuCommonNotRat_ranks_human, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 4, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+ggplot() + # 3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_rat, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = spl_RatOnly_ranks_rat, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 2, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+ggplot() + # 3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_mouse, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = spl_MoOnly_ranks_mouse, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 3, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+ggplot() + # 3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_human, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = spl_HuOnly_ranks_human, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 4, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+#Treeplot
+RatCD103nMoDC2bHuDC2Common <- Rat_Spl_CD103neg_vs_cDC2_GSEA
+RatCD103nMoDC2bHuDC2Common@result <- spl_top_500_rat %>% filter(Description %in% spl_common_terms)
+set.seed(123)
+treeplot(pairwise_termsim(RatCD103nMoDC2bHuDC2Common),  showCategory = 200, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.3), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 30, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75)
+set.seed(123)
+emapplot(pairwise_termsim(RatCD103nMoDC2bHuDC2Common), layout.params = list(layout = "kk"), color="p.adjust", showCategory=200, # Figure 7B, 8x5 inches
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none", max.overlaps = 1000)
+
+library(purrr)
+RatMoHu_SpleenCommonTerms <- purrr::reduce(list((spl_top_500_rat %>% filter(Description %in% spl_common_terms)),
+                                         (spl_top_500_mouse %>% filter(Description %in% spl_common_terms)),
+                                         (spl_top_500_human %>% filter(Description %in% spl_common_terms))),
+                                    full_join, by = c("ID", "Description"))
+
+RatMoHu_SpleenCommonTerms <- RatMoHu_SpleenCommonTerms %>%
+  rename(setSize_rat = setSize.x, setSize_mouse = setSize.y, setSize_human = setSize, enrichmentScore_rat = enrichmentScore.x,
+         enrichmentScore_mouse = enrichmentScore.y, enrichmentScore_human = enrichmentScore,
+         NES_rat = NES.x, NES_mouse = NES.y, NES_human = NES,
+         pvalue_rat = pvalue.x, pvalue_mouse = pvalue.y, pvalue_human = pvalue, p.adjust_rat = p.adjust.x, 
+         p.adjust_mouse = p.adjust.y, p.adjust_human = p.adjust, 
+         rank_rat = rank.x, rank_mouse = rank.y, rank_human = rank, adjRank_rat = adjRank.x, 
+         adjRank_mouse = adjRank.y, adjRank_human = adjRank,
+         qvalue_rat=qvalue.x, qvalue_mouse=qvalue.y, qvalue_human=qvalue,
+         leading_edge_rat=leading_edge.x, leading_edge_mouse=leading_edge.y, leading_edge_human=leading_edge,
+         core_enrichment_rat=core_enrichment.x, core_enrichment_mouse=core_enrichment.y, core_enrichment_human=core_enrichment)
+
+write.csv(RatMoHu_SpleenCommonTerms, "PMID_34777358_35637352 mouse cDC1 cDC2 correlation/RatMoHu_SpleenCommonTerms.csv") # supplementary table 6
+
+
+MoDC2bRatCD103nHuDC2Common <- MoSplDC2bDC2a_GSEA
+MoDC2bRatCD103nHuDC2Common@result <- spl_top_500_mouse %>% filter(Description %in% spl_common_terms)
+
+treeplot(pairwise_termsim(MoDC2bRatCD103nHuDC2Common),  showCategory = 30, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.3), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 30, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+set.seed(123)
+emapplot(pairwise_termsim(MoDC2bRatCD103nHuDC2Common), layout.params = list(layout = "kk"), color="p.adjust", showCategory=200,
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "all")
+
+HuDC2RatCD103nMoDC2bCommon <- HuSplCD103nCD103p_GSEA 
+HuDC2RatCD103nMoDC2bCommon@result <- spl_top_500_human %>% filter(Description %in% spl_common_terms)
+
+treeplot(pairwise_termsim(HuDC2RatCD103nMoDC2bCommon),  showCategory = 200, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.3), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 30, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+set.seed(123)
+emapplot(pairwise_termsim(HuDC2RatCD103nMoDC2bCommon), layout.params = list(layout = "kk"), color="p.adjust", showCategory=200,
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+
+# CDF Plot
+uniform_data <- data.frame(
+  x = seq(min(spl_common_ranks_rat$adjRank), max(spl_common_ranks_rat$adjRank), length.out = 100),
+  y = seq(0, 1, length.out = 100)
+)
+
+ggplot(data = spl_common_ranks_rat, aes(x = adjRank)) +
+  # Add ECDF curve
+  stat_ecdf(geom = "step", color = "blue", size = 1) +
+  # Add uniform curve
+  geom_line(data = uniform_data, aes(x = x, y = y), color = "red", linetype = "dashed", size = 1) +
+  labs(
+    title = "Empirical CDF and Uniform Distribution",
+    x = "Adjusted Rank (adjRank)",
+    y = "Cumulative Probability"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14), # Center the title
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12)
+  ) +
+  scale_y_continuous(labels = scales::percent) # Optional: Show y-axis as percentages
+
+#Rat CD103n, mouse MoDC, mouse inf-cDC2 enriched term comparison-----
+# Add adjRank to Rat GSEA results
+top_500_rat <- Rat_Spl_CD103negDom@result %>%
+  arrange(p.adjust) %>%
+  mutate(adjRank = row_number()) %>%
+  slice(1:500)
+
+# Add adjRank to Mouse MoDC GSEA results
+top_500_MoDC <- MoLungMcDom@result %>%
+  arrange(p.adjust) %>%
+  mutate(adjRank = row_number()) %>%
+  slice(1:500)
+
+# Add adjRank to Mouse inf-cDC2 GSEA results
+top_500_infDC2 <- MoLungInfDC2Dom@result %>%
+  arrange(p.adjust) %>%
+  mutate(adjRank = row_number()) %>%
+  slice(1:500)
+
+Triplecommon_terms <-intersect(intersect(top_500_rat$Description, top_500_MoDC$Description), top_500_infDC2$Description)
+CD103nMoDC_terms <- setdiff(intersect(top_500_rat$Description, top_500_MoDC$Description), top_500_infDC2$Description)
+CD103nInfDC2_terms <- setdiff(intersect(top_500_rat$Description, top_500_infDC2$Description), top_500_MoDC$Description)
+
+Triplecommon_ranks_rat <- top_500_rat %>%
+  filter(Description %in% Triplecommon_terms) %>%
+  dplyr::select(Description, adjRank)
+
+CD103nMoDC_ranks_rat <- top_500_rat %>%
+  filter(Description %in% CD103nMoDC_terms) %>%
+  dplyr::select(Description, adjRank)
+
+CD103nInfDC2_ranks_rat <- top_500_rat %>%
+  filter(Description %in% CD103nInfDC2_terms) %>%
+  dplyr::select(Description, adjRank)
+
+# Wilcoxon test for adjRank
+wilcox.test(common_ranks_rat$adjRank, mu = median(Triplecommon_ranks_rat$adjRank))
+
+wilcox.test(CD103nMoDC_ranks_rat$adjRank, mu = median(CD103nMoDC_ranks_rat$adjRank))
+
+wilcox.test(CD103nInfDC2_ranks_rat$adjRank, mu = median(CD103nInfDC2_ranks_rat$adjRank))
+
+# Histogram
+ggplot(data = Triplecommon_ranks_rat, aes(x = adjRank)) +
+  geom_histogram(bins = 20, fill = "lightblue", color = "black") +
+  labs(title = "Distribution of Common Terms by adjRank",
+       x = "Adjusted Rank (adjRank)",
+       y = "Frequency") +
+  theme_minimal()
+
+ggplot(data = CD103nMoDC_ranks_rat, aes(x = adjRank)) +
+  geom_histogram(bins = 20, fill = "lightblue", color = "black") +
+  labs(title = "Distribution of Common Terms by adjRank",
+       x = "Adjusted Rank (adjRank)",
+       y = "Frequency") +
+  theme_minimal()
+
+ggplot(data = CD103nInfDC2_ranks_rat, aes(x = adjRank)) +
+  geom_histogram(bins = 20, fill = "lightblue", color = "black") +
+  labs(title = "Distribution of Common Terms by adjRank",
+       x = "Adjusted Rank (adjRank)",
+       y = "Frequency") +
+  theme_minimal()
+
+
+
+#Thymus: Rat and mouse enriched term comparison-----
+# Add adjRank to Rat GSEA results
+Thy_top_500_rat <- Rat_Thy_CD103negDom@result %>%
+  arrange(p.adjust) %>%
+  mutate(adjRank = row_number()) %>%
+  slice(1:500)
+
+# Add adjRank to Mouse GSEA results
+Thy_top_500_mouse <- MoThyMoDC_Dom@result %>%
+  arrange(p.adjust) %>%
+  mutate(adjRank = row_number()) %>%
+  slice(1:500)
+
+venn.diagram(x=list(Thy_top_500_rat$Description, Thy_top_500_mouse$Description),
+             category.names = c("Rat", "Mouse"), filename = "pic/ThyCD103nTerms.png",
+             height = 1000, width = 1000,lwd=c(1,1), fill=c(2,3),	cex= 0.9, fontfamily="sans",
+             cat.dist=c(0.1, 0.1), cat.fontfamily="sans", margin=0.1)
+
+Thy_common_terms <- intersect(Thy_top_500_rat$Description, Thy_top_500_mouse$Description)
+
+Thy_common_ranks_rat <- Thy_top_500_rat %>%
+  filter(Description %in% Thy_common_terms) %>%
+  dplyr::select(Description, adjRank)
+
+Thy_common_ranks_mouse <- Thy_top_500_mouse %>%
+  filter(Description %in% Thy_common_terms) %>%
+  dplyr::select(Description, adjRank)
+
+# Wilcoxon test for adjRank
+wilcox.test(Thy_common_ranks_rat$adjRank, mu = median(Thy_top_500_rat$adjRank)) #Figure 7C
+
+wilcox.test(Thy_common_ranks_mouse$adjRank, mu = median(Thy_top_500_mouse$adjRank)) #Figure 7C
+
+# Histogram
+ggplot() + # Figure 7C, 3.3 x 1.9 inches
+  geom_histogram(data = Thy_top_500_rat, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = Thy_common_ranks_rat, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 2, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+
+ggplot() + # Figure 7C, 3.3 x 1.9 inches
+  geom_histogram(data = Thy_top_500_mouse, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = Thy_common_ranks_mouse, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 3, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+#Treeplot
+ThyMoDCcommon <- Rat_Thy_CD103neg_vs_cDC2_GSEA
+ThyMoDCcommon@result <- Thy_top_500_rat %>% filter(Description %in% Thy_common_terms)
+
+treeplot(pairwise_termsim(ThyMoDCcommon),  showCategory = 30, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.3), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 30, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+set.seed(123)
+emapplot(pairwise_termsim(ThyMoDCcommon), layout.params = list(layout = "kk"), color="p.adjust", showCategory=200, # Figure 7D, 8x5 inches
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+
+library(purrr)
+RatMo_ThyCommonTerms <- purrr::reduce(list((Thy_top_500_rat %>% filter(Description %in% Thy_common_terms)),
+                                             (Thy_top_500_mouse %>% filter(Description %in% Thy_common_terms))),
+                                           full_join, by = c("ID", "Description"))
+
+RatMo_ThyCommonTerms <- RatMo_ThyCommonTerms %>%
+  rename(setSize_rat = setSize.x, setSize_mouse = setSize.y, 
+         enrichmentScore_rat = enrichmentScore.x, enrichmentScore_mouse = enrichmentScore.y,
+         NES_rat = NES.x, NES_mouse = NES.y,
+         pvalue_rat = pvalue.x, pvalue_mouse = pvalue.y, 
+         p.adjust_rat = p.adjust.x, p.adjust_mouse = p.adjust.y, 
+         rank_rat = rank.x, rank_mouse = rank.y, 
+         adjRank_rat = adjRank.x, adjRank_mouse = adjRank.y,
+         qvalue_rat=qvalue.x, qvalue_mouse=qvalue.y,
+         leading_edge_rat=leading_edge.x, leading_edge_mouse=leading_edge.y,
+         core_enrichment_rat=core_enrichment.x, core_enrichment_mouse=core_enrichment.y)
+
+write.csv(RatMo_ThyCommonTerms, "PMID_34777358_35637352 mouse cDC1 cDC2 correlation/RatMo_ThyCommonTerms.csv") #supplementary table 7
+
+MoThyMoDCRatCD103ncommon <- MoThyMoDC_DC2_GSEA
+MoThyMoDCRatCD103ncommon@result <- Thy_top_500_mouse %>% filter(Description %in% Thy_common_terms)
+
+treeplot(pairwise_termsim(MoThyMoDCRatCD103ncommon),  showCategory = 200, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.3), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 30, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+set.seed(123)
+emapplot(pairwise_termsim(MoThyMoDCRatCD103ncommon), layout.params = list(layout = "kk"), color="p.adjust", showCategory=200,
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+
+
+#spleen terms vs thymus terms----
+spl_RatMoCommon_terms <- intersect(spl_top_500_rat$Description, spl_top_500_mouse$Description)
+Thy_common_terms <- intersect(Thy_top_500_rat$Description, Thy_top_500_mouse$Description)
+
+venn.diagram(x=list(spl_RatMoCommon_terms, Thy_common_terms),
+             category.names = c("Rat", "Mouse"), filename = "pic/SplRatMo_ThyRatMo_common.png",
+             height = 1000, width = 1000,lwd=c(1,1), fill=c(2,3),	cex= 0.9, fontfamily="sans",
+             cat.dist=c(0.1, 0.1), cat.fontfamily="sans", margin=0.1)
+
+spl_only_terms <- setdiff(spl_RatMoCommon_terms, Thy_common_terms)
+SplThyCommon_terms <- intersect(spl_RatMoCommon_terms, Thy_common_terms)
+Thy_only_terms <- setdiff(Thy_common_terms, spl_RatMoCommon_terms)
+
+SplOnly_RatMoCommon_ranks_rat <- spl_top_500_rat %>%
+  filter(Description %in% spl_only_terms) %>%
+  dplyr::select(Description, adjRank)
+
+SplThyCommon_RatMoCommon_ranks_rat <- spl_top_500_rat %>%
+  filter(Description %in% SplThyCommon_terms) %>%
+  dplyr::select(Description, adjRank)
+
+ThyOnly_RatMoCommon_ranks_rat <- Thy_top_500_rat %>%
+  filter(Description %in% Thy_only_terms) %>%
+  dplyr::select(Description, adjRank)
+
+# Wilcoxon test for adjRank
+wilcox.test(SplOnly_RatMoCommon_ranks_rat$adjRank, mu = median(spl_top_500_rat$adjRank))
+
+wilcox.test(SplThyCommon_RatMoCommon_ranks_rat$adjRank, mu = median(spl_top_500_rat$adjRank))
+
+wilcox.test(ThyOnly_RatMoCommon_ranks_rat$adjRank, mu = median(Thy_top_500_rat$adjRank))
+
+# Histogram
+ggplot() + # 3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_rat, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = SplOnly_RatMoCommon_ranks_rat, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 2, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+ggplot() + # 3.3 x 1.9 inches
+  geom_histogram(data = spl_top_500_rat, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = SplThyCommon_RatMoCommon_ranks_rat, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 2, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+ggplot() + # 3.3 x 1.9 inches
+  geom_histogram(data = Thy_top_500_rat, aes(x = adjRank), 
+                 breaks = seq(0, 500, by = 20),  # Define bin edges explicitly
+                 fill = "grey80", color = "black", alpha = 0.7) +
+  geom_histogram(data = ThyOnly_RatMoCommon_ranks_rat, aes(x = adjRank),
+                 breaks = seq(0, 500, by = 20),
+                 fill = 2, color = "black", alpha = 0.9) +
+  labs(x = "Rank by p.adjust",
+       y = "Number of Terms") +
+  theme_minimal()
+
+#Treeplot
+SplThyCommon_RatMoCommon_GSEA <- Rat_Spl_CD103neg_vs_cDC2_GSEA
+SplThyCommon_RatMoCommon_GSEA@result <- spl_top_500_rat %>% filter(Description %in% SplThyCommon_terms)
+
+treeplot(pairwise_termsim(SplThyCommon_RatMoCommon_GSEA),  showCategory = 30, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.3), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 30, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+set.seed(123)
+emapplot(pairwise_termsim(SplThyCommon_RatMoCommon_GSEA), layout.params = list(layout = "kk"), color="p.adjust", showCategory=200, # 8x5 inches
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+
+write.csv(ThyMoDCcommon@result, "PMID_34777358_35637352 mouse cDC1 cDC2 correlation/ThyMoDCcommon.csv")
+
+ThyOnly_RatMoCommon_GSEA <- Rat_Thy_CD103neg_vs_cDC2_GSEA
+ThyOnly_RatMoCommon_GSEA@result <- Thy_top_500_rat %>% filter(Description %in% Thy_only_terms)
+
+treeplot(pairwise_termsim(ThyOnly_RatMoCommon_GSEA),  showCategory = 200, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.3), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 30, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+set.seed(123)
+emapplot(pairwise_termsim(ThyOnly_RatMoCommon_GSEA), layout.params = list(layout = "kk"), color="p.adjust", showCategory=200, # 8x5 inches
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")

@@ -179,3 +179,55 @@ VlnPlot(Splenic_object,"LungMCscore1")+theme(legend.position = "none")	+
 Splenic_object@meta.data %>%
   group_by(ClusterNames) %>%
   summarise(avg_LungMCscore1 = mean(LungMCscore1, na.rm = TRUE))
+
+#GSEA----
+#calculate log2FC
+MoSplDC2bDC2aExpression <- FindMarkers(Splenic_object_simple, ident.1 = "cDC2b", ident.2 = "cDC2a")
+
+#save calculated log2FC
+write.csv(MoSplDC2bDC2aExpression, "PMID_33997687 mouse spleen CD11c+ scRNA-seq/MoSplDC2bDC2aExpression.csv", row.names = T)
+
+MoSplDC2bDC2aExpression <- read.csv("PMID_33997687 mouse spleen CD11c+ scRNA-seq/MoSplDC2bDC2aExpression.csv", row.names = 1)
+
+#format log2FC data
+MoSplDC2bDC2aExpression <- MoSplDC2bDC2aExpression[order(MoSplDC2bDC2aExpression$avg_log2FC, decreasing = T),]
+MoSplDC2bDC2aExpressionLog2FC <- MoSplDC2bDC2aExpression$avg_log2FC
+names(MoSplDC2bDC2aExpressionLog2FC) <- rownames(MoSplDC2bDC2aExpression)
+
+#execute the GSEA
+MoSplDC2bDC2a_GSEA <- gseGO(geneList = MoSplDC2bDC2aEqexpressionLog2FC, OrgDb = "org.Mm.eg.db", ont = "BP", keyType = "SYMBOL", pAdjustMethod="none")
+
+#divide CD103- equiv and CD103+equiv dominant gene sets
+MoSplDC2bDom <- MoSplDC2bDC2a_GSEA
+MoSplDC2bDom@result <- subset(MoSplDC2bDC2a_GSEA, MoSplDC2bDC2a_GSEA@result$enrichmentScore >0)
+
+MoSplDC2aDom <- MoSplDC2bDC2a_GSEA
+MoSplDC2aDom@result <- subset(MoSplDC2bDC2a_GSEA, MoSplDC2bDC2a_GSEA@result$enrichmentScore <0)
+
+#depict figures
+set.seed(123)
+emapplot(pairwise_termsim(MoSplDC2bDom), layout.params = list(layout = "kk"), color="p.adjust", showCategory=30,
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+set.seed(123)
+emapplot(pairwise_termsim(MoSplDC2aDom), layout.params = list(layout = "kk"), color="p.adjust", showCategory=30,
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+
+treeplot(pairwise_termsim(MoSplDC2bDom), showCategory = 30, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.15), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 20, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+
+treeplot(pairwise_termsim(MoSplDC2aDom), showCategory = 30, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.15), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 20, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+
+gseaplot2(MoSplDC2bDC2a_GSEA, 
+          geneSetID = c("GO:0006909", "GO:0002253", "GO:0001819",
+                        "GO:0006260", "GO:0007059", "GO:0044839"),
+          subplots = 1:2, pvalue_table = F, base_size = 14)
+
+#save GSEA results
+write.xlsx(list("MoSplDC2bDom"=MoSplDC2bDom@result, 
+                "MoSplDC2aDom"=MoSplDC2aDom@result), 
+           "PMID_33997687 mouse spleen CD11c+ scRNA-seq/MoSplDC2bDC2a_GSEA.xlsx")

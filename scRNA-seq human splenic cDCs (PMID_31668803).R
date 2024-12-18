@@ -119,3 +119,57 @@ write.table(human_splenic_DC_markers[human_splenic_DC_markers$cluster == "Mitoti
 write.table(human_splenic_DC_markers[human_splenic_DC_markers$cluster == "AS DC",]$rat_gene,
             file = "PMID_31668803_human/HumanSpl_AS_DC_signature.gene_list.txt",
             col.names="gene_symbol", row.names=F, quote = F)
+
+#GSEA----
+#calculate log2FC
+human_splenic_DC_simple <- RenameIdents(human_splenic_DC, "CLEC10A+ cDC2"="CD103nEq", "CCR7+ cDC2"="CD103nEq",
+                                        "CLEC10A- cDC2"="CD103pEq", "Mitotic cDC2"="CD103pEq")
+HuSplCD103nCD103pExpression <- FindMarkers(human_splenic_DC_simple, ident.1 = "CD103nEq", ident.2 = "CD103pEq")
+
+#save calculated log2FC
+write.csv(HuSplCD103nCD103pExpression, "PMID_31668803_human/HuSplCD103nCD103pExpression.csv", row.names = T)
+
+HuSplCD103nCD103pExpression  <- read.csv("PMID_31668803_human/HuSplCD103nCD103pExpression.csv", row.names = 1)
+
+#format log2FC data
+HuSplCD103nCD103pExpression <- HuSplCD103nCD103pExpression[order(HuSplCD103nCD103pExpression$avg_log2FC, decreasing = T),]
+HuSplCD103nCD103pExpressionLog2FC <- HuSplCD103nCD103pExpression$avg_log2FC
+names(HuSplCD103nCD103pExpressionLog2FC) <- rownames(HuSplCD103nCD103pExpression)
+
+#execute the GSEA
+HuSplCD103nCD103p_GSEA <- gseGO(geneList = HuSplCD103nCD103pExpressionLog2FC, OrgDb = "org.Hs.eg.db", ont = "BP", keyType = "SYMBOL", pAdjustMethod="none")
+
+#divide CD103- equiv and CD103+equiv dominant gene sets
+HuSplCD103nDom <- HuSplCD103nCD103p_GSEA
+HuSplCD103nDom@result <- subset(HuSplCD103nCD103p_GSEA, HuSplCD103nCD103p_GSEA@result$enrichmentScore >0)
+
+HuSplCD103pDom <- HuSplCD103nCD103p_GSEA
+HuSplCD103pDom@result <- subset(HuSplCD103nCD103p_GSEA, HuSplCD103nCD103p_GSEA@result$enrichmentScore <0)
+
+#depict figures
+set.seed(123)
+emapplot(pairwise_termsim(HuSplCD103nDom), layout.params = list(layout = "kk"), color="p.adjust", showCategory=30,
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+set.seed(123)
+emapplot(pairwise_termsim(HuSplCD103pDom), layout.params = list(layout = "kk"), color="p.adjust", showCategory=30,
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+
+treeplot(pairwise_termsim(HuSplCD103nDom), showCategory = 30, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.15), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 20, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+
+treeplot(pairwise_termsim(HuSplCD103pDom), showCategory = 30, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.15), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 20, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+
+gseaplot2(HuSplCD103nCD103p_GSEA, 
+          geneSetID = c("GO:0006909", "GO:0002253", "GO:0001819",
+                        "GO:0006260", "GO:0007059", "GO:0044839"),
+          subplots = 1:2, pvalue_table = F, base_size = 14)
+
+#save GSEA results
+write.xlsx(list("HuSplCD103nDom"=HuSplCD103nDom@result, 
+                "HuSplCD103pDom"=HuSplCD103pDom@result), 
+           "PMID_31668803_human/HuSplCD103nCD103p_GSEA.xlsx")

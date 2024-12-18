@@ -231,3 +231,55 @@ VlnPlot(integrated_TOMATO_DCs,"LungMCscore1")+theme(legend.position = "none")	+
 integrated_TOMATO_DCs@meta.data %>%
   group_by(ClusterNames) %>%
   summarise(avg_LungMCscore1 = mean(LungMCscore1, na.rm = TRUE))
+
+#GSEA----
+#calculate log2FC
+MoThyMoDC_DC2Expression <- FindMarkers(JoinLayers(integrated_TOMATO_DCs), ident.1 = "moDC", ident.2 = "cDC2")
+
+#save calculated log2FC
+write.csv(MoThyMoDC_DC2Expression, "PMID_32398640 Thymic monocyte-derived DCs/MoThyMoDC_DC2Expression.csv", row.names = T)
+
+MoThyMoDC_DC2Expression <- read.csv("PMID_33997687 mouse spleen CD11c+ scRNA-seq/MoThyMoDC_DC2Expression.csv", row.names = 1)
+
+#format log2FC data
+MoThyMoDC_DC2Expression <- MoThyMoDC_DC2Expression[order(MoThyMoDC_DC2Expression$avg_log2FC, decreasing = T),]
+MoThyMoDC_DC2ExpressionLog2FC <- MoThyMoDC_DC2Expression$avg_log2FC
+names(MoThyMoDC_DC2ExpressionLog2FC) <- rownames(MoThyMoDC_DC2Expression)
+
+#execute the GSEA
+MoThyMoDC_DC2_GSEA <- gseGO(geneList = MoThyMoDC_DC2ExpressionLog2FC, OrgDb = "org.Mm.eg.db", ont = "BP", keyType = "SYMBOL", pAdjustMethod="none")
+
+#divide CD103- equiv and CD103+equiv dominant gene sets
+MoThyMoDC_Dom <- MoThyMoDC_DC2_GSEA
+MoThyMoDC_Dom@result <- subset(MoThyMoDC_DC2_GSEA, MoThyMoDC_DC2_GSEA@result$enrichmentScore >0)
+
+MoThyDC2Dom <- MoThyMoDC_DC2_GSEA
+MoThyDC2Dom@result <- subset(MoThyMoDC_DC2_GSEA, MoThyMoDC_DC2_GSEA@result$enrichmentScore <0)
+
+#depict figures
+set.seed(123)
+emapplot(pairwise_termsim(MoThyMoDC_Dom), layout.params = list(layout = "kk"), color="p.adjust", showCategory=30,
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+set.seed(123)
+emapplot(pairwise_termsim(MoThyDC2Dom), layout.params = list(layout = "kk"), color="p.adjust", showCategory=30,
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+
+treeplot(pairwise_termsim(MoThyMoDC_Dom), showCategory = 30, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.15), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 20, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+
+treeplot(pairwise_termsim(MoThyDC2Dom), showCategory = 30, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.15), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 20, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+
+gseaplot2(MoThyMoDC_DC2_GSEA, 
+          geneSetID = c("GO:0006909", "GO:0002253", "GO:0001819",
+                        "GO:0006260", "GO:0007059", "GO:0044839"),
+          subplots = 1:2, pvalue_table = F, base_size = 14)
+
+#save GSEA results
+write.xlsx(list("MoThyMoDC_Dom"=MoThyMoDC_Dom@result, 
+                "MoThyDC2Dom"=MoThyDC2Dom@result), 
+           "PMID_32398640 Thymic monocyte-derived DCs/MoThyMoDC_DC2_GSEA.xlsx")

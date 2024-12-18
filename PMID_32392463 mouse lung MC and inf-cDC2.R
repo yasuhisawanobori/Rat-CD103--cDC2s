@@ -136,3 +136,83 @@ write.table(infDC2vsMC_markers[infDC2vsMC_markers$avg_log2FC>=1,]$rat_gene,
 write.table(infDC2vsMC_markers[infDC2vsMC_markers$avg_log2FC<=-1,]$rat_gene,
             file = "PMID_32392463 mouse lung MC and inf-cDC2/Lung_MCvsinfDC2signature.gene_list.txt",
             col.names="gene_symbol", row.names=F, quote = F)
+
+#GSEA----
+#re-clustering
+MouseLungDCs_simple <- MouseLungDCs
+                                   
+Idents(object = MouseLungDCs_simple, 
+       cells=intersect(rownames(subset(MouseLungDCs_simple, subset=umap_2>-5)@meta.data), 
+                       WhichCells(MouseLungDCs_simple, idents = "proliferating DC")))<- "proliferating cDC2"
+
+Idents(object = MouseLungDCs_simple, 
+       cells=intersect(rownames(subset(MouseLungDCs_simple, subset=umap_2 < -5)@meta.data), 
+                       WhichCells(MouseLungDCs_simple, idents = "proliferating DC")))<- "proliferating cDC1"
+
+MouseLungDCs_simple <- RenameIdents(MouseLungDCs_simple, "proliferating cDC2"="cDC2a", "Migratory cDC2" ="cDC2a",
+                                    "Non-migratory cDC2" ="cDC2a")
+
+#calculate log2FC
+MoLungMcDC2aExpression <- FindMarkers(MouseLungDCs_simple, ident.1 = "MC", ident.2 = "cDC2a")
+MoLungInfDC2DC2aExpression <- FindMarkers(MouseLungDCs_simple, ident.1 = "inf-cDC2", ident.2 = "cDC2a")
+
+#save calculated log2FC
+write.csv(MoLungMcDC2aExpression, "PMID_32392463 mouse lung MC and inf-cDC2/MoLungMcDC2aExpression.csv", row.names = T)
+write.csv(MoLungInfDC2DC2aExpression, "PMID_32392463 mouse lung MC and inf-cDC2/MoLungInfDC2DC2aExpression.csv", row.names = T)
+
+MoLungMcDC2aExpression <- read.csv("PMID_32392463 mouse lung MC and inf-cDC2/MoLungMcDC2aExpression.csv", row.names = 1)
+MoLungInfDC2DC2aExpression <- read.csv("PMID_32392463 mouse lung MC and inf-cDC2/MoLungInfDC2DC2aExpression.csv", row.names = 1)
+
+#format log2FC data
+MoLungMcDC2aExpression <- MoLungMcDC2aExpression[order(MoLungMcDC2aExpression$avg_log2FC, decreasing = T),]
+MoLungMcDC2aExpressionLog2FC <- MoLungMcDC2aExpression$avg_log2FC
+names(MoLungMcDC2aExpressionLog2FC) <- rownames(MoLungMcDC2aExpression)
+
+MoLungInfDC2DC2aExpression <- MoLungInfDC2DC2aExpression[order(MoLungInfDC2DC2aExpression$avg_log2FC, decreasing = T),]
+MoLungInfDC2DC2aExpressionLog2FC <- MoLungInfDC2DC2aExpression$avg_log2FC
+names(MoLungInfDC2DC2aExpressionLog2FC) <- rownames(MoLungInfDC2DC2aExpression)
+
+#execute the GSEA
+MoLungMcDC2a_GSEA <- gseGO(geneList = MoLungMcDC2aExpressionLog2FC, OrgDb = "org.Mm.eg.db", ont = "BP", keyType = "SYMBOL", pAdjustMethod="none")
+
+MoLungInfDC2DC2a_GSEA <- gseGO(geneList = MoLungInfDC2DC2aExpressionLog2FC, OrgDb = "org.Mm.eg.db", ont = "BP", keyType = "SYMBOL", pAdjustMethod="none")
+
+#divide CD103- equiv and CD103+equiv dominant gene sets
+MoLungMcDom <- MoLungMcDC2a_GSEA
+MoLungMcDom@result <- subset(MoLungMcDC2a_GSEA, MoLungMcDC2a_GSEA@result$enrichmentScore >0)
+
+MoLungInfDC2Dom <- MoLungInfDC2DC2a_GSEA
+MoLungInfDC2Dom@result <- subset(MoLungInfDC2DC2a_GSEA, MoLungInfDC2DC2a_GSEA@result$enrichmentScore >0)
+
+#depict figures
+set.seed(123)
+emapplot(pairwise_termsim(MoLungMcDom), layout.params = list(layout = "kk"), color="p.adjust", showCategory=30,
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+set.seed(123)
+emapplot(pairwise_termsim(MoLungInfDC2Dom), layout.params = list(layout = "kk"), color="p.adjust", showCategory=30,
+         cluster.params = list(cluster = T, legend=T, n=5), cex_label_group = 1.5, node_label = "none")
+
+treeplot(pairwise_termsim(MoLungMcDom), showCategory = 30, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.15), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 20, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+
+treeplot(pairwise_termsim(MoLungInfDC2Dom), showCategory = 30, color = "p.adjust", # 9.65x5 inches
+         offset.params = list(bar_tree = rel(5), extend=0.5, hexpand = 0.15), hilight.params = list(hilight = T),
+         fontsize = 4, label_format = 20, cluster.params = list(label_format = 10), label_format_tiplab = 100, 
+         cex_category = 0.75 )
+
+gseaplot2(MoLungMcDC2a_GSEA, 
+          geneSetID = c("GO:0006909", "GO:0002253", "GO:0001819",
+                        "GO:0006260", "GO:0007059", "GO:0044839"),
+          subplots = 1:2, pvalue_table = F, base_size = 14)
+
+gseaplot2(MoLungInfDC2DC2a_GSEA, 
+          geneSetID = c("GO:0006909", "GO:0002253", "GO:0001819",
+                        "GO:0006260", "GO:0007059", "GO:0044839"),
+          subplots = 1:2, pvalue_table = F, base_size = 14)
+
+#save GSEA results
+write.xlsx(list("MoLungMcDom"=MoLungMcDom@result, 
+                "MoLungInfDC2DomDom"=MoLungInfDC2Dom@result), 
+           "PMID_32392463 mouse lung MC and inf-cDC2/MoLung_GSEA.xlsx")
